@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Task Manager</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #333;
+      color: white;
+    }
+    td {
+      background-color: #fff;
+    }
+    input, button {
+      padding: 0.6rem;
+      margin: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .danger {
+      background-color: #e74c3c;
+    }
+    .danger:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <h1>Task Manager</h1>
+
+  <form id="taskForm">
+    <input type="text" id="taskName" placeholder="Task Name" required>
+    <input type="date" id="taskDate" required>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <table id="taskTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Task Name</th>
+        <th>Task Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Tasks will be inserted here dynamically -->
+    </tbody>
+  </table>
+
+  <script>
+    let tasks = [];
+
+    const taskForm = document.getElementById("taskForm");
+    const taskTable = document.getElementById("taskTable").querySelector("tbody");
+
+    taskForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("taskName").value;
+      const date = document.getElementById("taskDate").value;
+
+      const task = {
+        name,
+        date,
+        completed: false
+      };
+
+      // POST to Lambda/API Gateway
+      const res = await fetch("https://o6g16fppmg.execute-api.ap-south-1.amazonaws.com/production/task", {
+        method: "POST",
+        body: JSON.stringify(task)
+      });
+
+      if (res.ok) {
+        loadTasks();
+        taskForm.reset();
+      }
+    });
+
+    async function loadTasks() {
+      const res = await fetch("https://o6g16fppmg.execute-api.ap-south-1.amazonaws.com/production/task");
+      const data = await res.json();
+      tasks = data;
+      renderTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch("https://o6g16fppmg.execute-api.ap-south-1.amazonaws.com/production/task", {
+        method: "DELETE",
+        body: JSON.stringify({ id })
+      });
+      loadTasks();
+    }
+
+    function renderTasks() {
+      taskTable.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${task.name}</td>
+          <td>${task.date || '—'}</td>
+          <td>${task.completed ? "✅" : "❌"}</td>
+          <td>
+            <button class="danger" onclick="deleteTask('${task.id}')">Delete</button>
+          </td>
+        `;
+        taskTable.appendChild(row);
+      });
+    }
+
+    // Initial load
+    loadTasks();
+  </script>
+</body>
+</html>
